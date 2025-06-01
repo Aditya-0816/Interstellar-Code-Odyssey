@@ -1,3 +1,3 @@
 # Interstellar-Code-Odyssey
 
-##Space Puzzle Game 🚀🧑‍🚀
+## Space Puzzle Game 🚀🧑‍🚀
