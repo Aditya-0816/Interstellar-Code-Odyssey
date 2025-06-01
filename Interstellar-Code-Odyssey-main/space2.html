@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intense Space Explorer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000000;
+            font-family: 'Inter', sans-serif;
+            color: #ffffff;
+        }
+        #gameCanvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        .overlay {
+            position: absolute;
+            pointer-events: none;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background: radial-gradient(circle, transparent 60%, rgba(0, 30, 60, 0.4) 100%);
+        }
+        .message-box {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(40, 40, 40, 0.8);
+            color: #00ffff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 100;
+            display: none;
+            text-align: center;
+            border: 1px solid #00ffff;
+            box-shadow: 0 0 15px #00ffff;
+        }
+        .hud {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+        .hud-item {
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+        }
+        .hud-label {
+            margin-right: 10px;
+            font-weight: bold;
+            color: #00ffff;
+        }
+        .hud-value {
+            color: #ffffff;
+        }
+        .game-title {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 60px;
+            font-weight: bold;
+            color: #ffffff;
+            text-shadow: 0 0 20px #00ffff, 0 0 40px #0088ff;
+            opacity: 1;
+            transition: opacity 2s ease-in-out;
+            text-align: center;
+            pointer-events: none;
+        }
+        .game-subtitle {
+            position: absolute;
+            top: 58%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+            opacity: 1;
+            transition: opacity 2s ease-in-out;
+            text-align: center;
+            pointer-events: none;
+        }
+        .start-button {
+            position: absolute;
+            top: 70%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 15px 30px;
+            background-color: rgba(0, 40, 80, 0.8);
+            color: #00ffff;
+            border: 2px solid #00ffff;
+            border-radius: 30px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+        .start-button:hover {
+            background-color: rgba(0, 60, 120, 0.9);
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.8);
+            transform: translate(-50%, -50%) scale(1.05);
+        }
+        .controls-info {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #ffffff;
+            border: 1px solid #00ffff;
+        }
+        .anomaly-alert {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 0, 0, 0.3);
+            color: #ff0000;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 24px;
+            text-align: center;
+            display: none;
+            animation: pulse 1s infinite;
+            border: 2px solid #ff0000;
+            box-shadow: 0 0 20px #ff0000;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div class="overlay"></div>
+    
+    <div id="messageBox" class="message-box"></div>
+    
+    <div id="titleScreen">
+        <div class="game-title">STELLAR NEXUS</div>
+        <div class="game-subtitle">An Interstellar Exploration Experience</div>
+        <button id="startButton" class="start-button">LAUNCH MISSION</button>
+    </div>
+    
+    <div id="gameHUD" class="hud" style="display: none;">
+        <div class="hud-item">
+            <span class="hud-label">COORDINATES:</span>
+            <span id="coordinates" class="hud-value">X: 0.00 | Y: 0.00 | Z: 0.00</span>
+        </div>
+        <div class="hud-item">
+            <span class="hud-label">VELOCITY:</span>
+            <span id="velocity" class="hud-value">0.00 units/s</span>
+        </div>
+        <div class="hud-item">
+            <span class="hud-label">ANOMALIES DETECTED:</span>
+            <span id="anomalyCount" class="hud-value">0</span>
+        </div>
+        <div class="hud-item">
+            <span class="hud-label">ENERGY:</span>
+            <span id="energy" class="hud-value">100%</span>
+        </div>
+    </div>
+    
+    <div class="controls-info">
+        WASD - Movement | SPACE - Boost | MOUSE - Look | SHIFT - Slow Motion
+    </div>
+    
+    <div id="anomalyAlert" class="anomaly-alert">
+        SPATIAL ANOMALY DETECTED!
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        // Import necessary modules from Three.js
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+
+        // --- Game State ---
+        let gameStarted = false;
+        let anomalyCount = 0;
+        let playerEnergy = 100;
+        let playerVelocity = new THREE.Vector3();
+        let movementSpeed = 0.1;
+        let playerDirection = new THREE.Vector3();
+        
+        // --- Core Three.js Components ---
+        let scene, camera, renderer, controls;
+        let stars, anomalies = [], celestialBodies = [];
+        let composer, bloomPass;
+        const canvas = document.getElementById('gameCanvas');
+        
+        // --- UI Elements ---
+        const messageBox = document.getElementById('messageBox');
+        const titleScreen = document.getElementById('titleScreen');
+        const startButton = document.getElementById('startButton');
+        const gameHUD = document.getElementById('gameHUD');
+        const coordinatesElement = document.getElementById('coordinates');
+        const velocityElement = document.getElementById('velocity');
+        const anomalyCountElement = document.getElementById('anomalyCount');
+        const energyElement = document.getElementById('energy');
+        const anomalyAlert = document.getElementById('anomalyAlert');
+        
+        // --- Input Tracking ---
+        const keysPressed = {};
+        let mouseX = 0, mouseY = 0;
+        let isPointerLocked = false;
+        
+        // --- Initialization Function ---
+        function init() {
+            // 1. Scene: Container for all 3D objects
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x000000, 0.00015);
+            
+            // 2. Camera: Defines the viewpoint
+            camera = new THREE.PerspectiveCamera(
+                75, // Field of View (degrees)
+                window.innerWidth / window.innerHeight, // Aspect Ratio
+                0.1, // Near clipping plane
+                2000 // Far clipping plane
+            );
+            camera.position.z = 5;
+            
+            // 3. Renderer: Draws the scene onto the canvas
+            renderer = new THREE.WebGLRenderer({
+                canvas: canvas,
+                antialias: true,
+                powerPreference: "high-performance"
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setClearColor(0x000000);
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.0;
+            
+            // --- Post-processing ---
+            setupPostProcessing();
+            
+            // --- Controls ---
+            setupControls();
+            
+            // --- Scene Elements ---
+            createStarfield();
+            createCelestialBodies();
+            createAnomalies();
+            createLights();
+            
+            // --- Event Listeners ---
+            setupEventListeners();
+            
+            // Show welcome message
+            showMessage("Welcome to Stellar Nexus. Press LAUNCH MISSION to begin your exploration.", 5000);
+        }
+        
+        // --- Post-processing Setup ---
+        function setupPostProcessing() {
+            composer = new EffectComposer(renderer);
+            
+            const renderPass = new RenderPass(scene, camera);
+            composer.addPass(renderPass);
+            
+            // Add bloom effect for stars and glowing objects
+            bloomPass = new UnrealBloomPass(
+                new THREE.Vector2(window.innerWidth, window.innerHeight),
+                1.5,    // strength
+                0.4,    // radius
+                0.85    // threshold
+            );
+            composer.addPass(bloomPass);
+            
+            // Add custom glitch shader pass (simplified)
+            const glitchShader = {
+                uniforms: {
+                    "tDiffuse": { value: null },
+                    "time": { value: 0.0 },
+                    "amount": { value: 0.0 }
+                },
+                vertexShader: `
+                    varying vec2 vUv;
+                    void main() {
+                        vUv = uv;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform sampler2D tDiffuse;
+                    uniform float time;
+                    uniform float amount;
+                    varying vec2 vUv;
+                    
+                    void main() {
+                        vec2 uv = vUv;
+                        
+                        // Simple glitch effect
+                        if (amount > 0.0) {
+                            // Offset based on time and amount
+                            float x = uv.x + sin(uv.y * 10.0 + time) * amount * 0.1;
+                            float y = uv.y + sin(uv.x * 10.0 + time) * amount * 0.05;
+                            uv = vec2(x, y);
+                        }
+                        
+                        gl_FragColor = texture2D(tDiffuse, uv);
+                    }
+                `
+            };
+            
+            const glitchPass = new ShaderPass(glitchShader);
+            glitchPass.renderToScreen = true;
+            glitchPass.uniforms["amount"].value = 0.0;
+            composer.addPass(glitchPass);
+            
+            // Store for later use in animations
+            composer.glitchPass = glitchPass;
+        }
+        
+        // --- Controls Setup ---
+        function setupControls() {
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.1;
+            controls.screenSpacePanning = false;
+            controls.minDistance = 1;
+            controls.maxDistance = 1000;
+            controls.enablePan = false;
+            controls.enabled = false; // Disable initially until game starts
+        }
+        
+        // --- Create Scene Elements ---
+        function createStarfield() {
+            const starGeometry = new THREE.BufferGeometry();
+            const starMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.05,
+                sizeAttenuation: true,
+                transparent: true,
+                opacity: 0.8,
+                map: createStarTexture(),
+                blending: THREE.AdditiveBlending
+            });
+            
+            const starCount = 50000;
+            const radius = 1000;
+            const starVertices = [];
+            const starColors = [];
+            const starSizes = [];
+            
+            for (let i = 0; i < starCount; i++) {
+                // Enhanced star distribution
+                const theta = 2 * Math.PI * Math.random();
+                const phi = Math.acos(2 * Math.random() - 1);
+                const r = Math.cbrt(Math.random()) * radius;
+                
+                const x = r * Math.sin(phi) * Math.cos(theta);
+                const y = r * Math.sin(phi) * Math.sin(theta);
+                const z = r * Math.cos(phi);
+                
+                starVertices.push(x, y, z);
+                
+                // Random star colors (mostly white but some colored stars)
+                const starType = Math.random();
+                if (starType > 0.98) {
+                    // Blue giant
+                    starColors.push(0.7, 0.8, 1.0);
+                } else if (starType > 0.96) {
+                    // Red giant
+                    starColors.push(1.0, 0.5, 0.5);
+                } else if (starType > 0.94) {
+                    // Yellow star
+                    starColors.push(1.0, 0.9, 0.6);
+                } else {
+                    // White star with slight variations
+                    const whiteness = 0.9 + Math.random() * 0.1;
+                    starColors.push(whiteness, whiteness, whiteness);
+                }
+                
+                // Randomize star sizes slightly
+                starSizes.push(0.5 + Math.random() * 1.5);
+            }
+            
+            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+            starGeometry.setAttribute('color', new THREE.Float32BufferAttribute(starColors, 3));
+            starGeometry.setAttribute('size', new THREE.Float32BufferAttribute(starSizes, 1));
+            
+            starMaterial.vertexColors = true;
+            
+            stars = new THREE.Points(starGeometry, starMaterial);
+            scene.add(stars);
+            
+            // Add a central star glow for effect
+            const glowGeometry = new THREE.SphereGeometry(50, 32, 32);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: 0x0088ff,
+                transparent: true,
+                opacity: 0.03,
+                side: THREE.BackSide
+            });
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            glow.position.set(-300, 100, -600);
+            scene.add(glow);
+        }
+        
+        function createStarTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 32;
+            canvas.height = 32;
+            const ctx = canvas.getContext('2d');
+            
+            const gradient = ctx.createRadialGradient(
+                canvas.width / 2,
+                canvas.height / 2,
+                0,
+                canvas.width / 2,
+                canvas.height / 2,
+                canvas.width / 2
+            );
+            
+            gradient.addColorStop(0, 'rgba(255,255,255,1)');
+            gradient.addColorStop(0.2, 'rgba(255,255,255,0.8)');
+            gradient.addColorStop(0.5, 'rgba(255,255,255,0.1)');
+            gradient.addColorStop(1, 'rgba(255,255,255,0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            const texture = new THREE.Texture(canvas);
+            texture.needsUpdate = true;
+            return texture;
+        }
+        
+        function createCelestialBodies() {
+            // Create planets, nebulae, etc.
+            const celestialTypes = [
+                { type: 'planet', count: 5 },
+                { type: 'nebula', count: 3 },
+                { type: 'asteroid', count: 50 }
+            ];
+            
+            celestialTypes.forEach(category => {
+                for (let i = 0; i < category.count; i++) {
+                    let celestial;
+                    
+                    switch(category.type) {
+                        case 'planet':
+                            celestial = createPlanet();
+                            break;
+                        case 'nebula':
+                            celestial = createNebula();
+                            break;
+                        case 'asteroid':
+                            celestial = createAsteroid();
+                            break;
+                    }
+                    
+                    if (celestial) {
+                        // Position randomly but far from origin
+                        const distance = 200 + Math.random() * 700;
+                        const theta = 2 * Math.PI * Math.random();
+                        const phi = Math.acos(2 * Math.random() - 1);
+                        
+                        celestial.position.x = distance * Math.sin(phi) * Math.cos(theta);
+                        celestial.position.y = distance * Math.sin(phi) * Math.sin(theta);
+                        celestial.position.z = distance * Math.cos(phi);
+                        
+                        // Add random rotation
+                        celestial.rotation.x = Math.random() * Math.PI;
+                        celestial.rotation.y = Math.random() * Math.PI;
+                        celestial.rotation.z = Math.random() * Math.PI;
+                        
+                        // Store original values for animation
+                        celestial.userData = {
+                            rotationSpeed: {
+                                x: (Math.random() - 0.5) * 0.002,
+                                y: (Math.random() - 0.5) * 0.002,
+                                z: (Math.random() - 0.5) * 0.001
+                            },
+                            originalPosition: celestial.position.clone(),
+                            wobbleAmount: Math.random() * 0.5,
+                            wobbleSpeed: 0.2 + Math.random() * 0.5
+                        };
+                        
+                        scene.add(celestial);
+                        celestialBodies.push(celestial);
+                    }
+                }
+            });
+        }
+        
+        function createPlanet() {
+            const size = 5 + Math.random() * 15;
+            const segments = 32;
+            
+            // Random planet type
+            const planetType = Math.floor(Math.random() * 5);
+            let planetMaterial;
+            
+            switch (planetType) {
+                case 0: // Rocky planet
+                    planetMaterial = new THREE.MeshPhongMaterial({
+                        color: new THREE.Color(0.6 + Math.random() * 0.4, 
+                                              0.4 + Math.random() * 0.4, 
+                                              0.2 + Math.random() * 0.3),
+                        shininess: 5,
+                        bumpScale: 0.5,
+                        roughness: 0.8
+                    });
+                    break;
+                case 1: // Gas giant
+                    planetMaterial = new THREE.MeshPhongMaterial({
+                        color: new THREE.Color(
+                            0.4 + Math.random() * 0.4,
+                            0.4 + Math.random() * 0.4,
+                            0.6 + Math.random() * 0.4
+                        ),
+                        shininess: 30,
+                        opacity: 0.9,
+                        transparent: true
+                    });
+                    break;
+                case 2: // Ice planet
+                    planetMaterial = new THREE.MeshPhongMaterial({
+                        color: new THREE.Color(0.8, 0.9, 1.0),
+                        shininess: 80,
+                        opacity: 0.8,
+                        transparent: true
+                    });
+                    break;
+                case 3: // Lava planet
+                    planetMaterial = new THREE.MeshPhongMaterial({
+                        color: new THREE.Color(0.8, 0.3, 0.1),
+                        emissive: new THREE.Color(0.5, 0.1, 0),
+                        shininess: 20
+                    });
+                    break;
+                case 4: // Exotic planet
+                    planetMaterial = new THREE.MeshPhongMaterial({
+                        color: new THREE.Color(
+                            0.3 + Math.random() * 0.7,
+                            0.3 + Math.random() * 0.7,
+                            0.3 + Math.random() * 0.7
+                        ),
+                        shininess: 50,
+                        metalness: 0.5
+                    });
+                    break;
+            }
+            
+            const planet = new THREE.Mesh(
+                new THREE.SphereGeometry(size, segments, segments),
+                planetMaterial
+            );
+            
+            // Add atmosphere for some planets
+            if (Math.random() > 0.5) {
+                const atmosphereSize = size * 1.2;
+                const atmosphereColor = new THREE.Color(
+                    0.5 + Math.random() * 0.5,
+                    0.5 + Math.random() * 0.5,
+                    0.5 + Math.random() * 0.5
+                );
+                
+                const atmosphereMaterial = new THREE.MeshBasicMaterial({
+                    color: atmosphereColor,
+                    transparent: true,
+                    opacity: 0.2,
+                    side: THREE.BackSide
+                });
+                
+                const atmosphere = new THREE.Mesh(
+                    new THREE.SphereGeometry(atmosphereSize, segments, segments),
+                    atmosphereMaterial
+                );
+                
+                planet.add(atmosphere);
+            }
+            
+            // Add rings for some gas giants
+            if (planetType === 1 && Math.random() > 0.6) {
+                const ringGeometry = new THREE.RingGeometry(
+                    size * 1.5,
+                    size * 2.5,
+                    64
+                );
+                
+                const ringMaterial = new THREE.MeshBasicMaterial({
+                    color: new THREE.Color(
+                        0.6 + Math.random() * 0.4,
+                        0.6 + Math.random() * 0.4,
+                        0.6 + Math.random() * 0.4
+                    ),
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                
+                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                ring.rotation.x = Math.PI / 2;
+                planet.add(ring);
+            }
+            
+            planet.castShadow = true;
+            planet.receiveShadow = true;
+            
+            return planet;
+        }
+        
+        function createNebula() {
+            // Create a particle-based nebula
+            const particleCount = 5000;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            
+            // Choose a color theme for the nebula
+            const colorThemes = [
+                { primary: new THREE.Color(0.8, 0.2, 0.8), secondary: new THREE.Color(0.2, 0.2, 0.8) }, // Purple-blue
+                { primary: new THREE.Color(0.8, 0.5, 0.2), secondary: new THREE.Color(0.1, 0.7, 0.3) }, // Orange-green
+                { primary: new THREE.Color(0.2, 0.8, 0.8), secondary: new THREE.Color(0.8, 0.3, 0.5) }  // Cyan-pink
+            ];
+            
+            const colorTheme = colorThemes[Math.floor(Math.random() * colorThemes.length)];
+            
+            const size = 30 + Math.random() * 50;
+            
+            for (let i = 0; i < particleCount; i++) {
+                // Create a cloud-like distribution
+                const theta = 2 * Math.PI * Math.random();
+                const phi = Math.acos(2 * Math.random() - 1);
+                
+                // Use a random distribution with more particles toward center
+                const r = Math.pow(Math.random(), 2) * size;
+                
+                const x = r * Math.sin(phi) * Math.cos(theta);
+                const y = r * Math.sin(phi) * Math.sin(theta);
+                const z = r * Math.cos(phi);
+                
+                positions[i * 3] = x;
+                positions[i * 3 + 1] = y;
+                positions[i * 3 + 2] = z;
+                
+                // Mix between primary and secondary colors
+                const mixFactor = Math.random();
+                const color = new THREE.Color().lerpColors(
+                    colorTheme.primary,
+                    colorTheme.secondary,
+                    mixFactor
+                );
+                
+                colors[i * 3] = color.r;
+                colors[i * 3 + 1] = color.g;
+                colors[i * 3 + 2] = color.b;
+            }
+            
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: 0.5,
+                map: createStarTexture(),
+                transparent: true,
+                opacity: 0.6,
+                vertexColors: true,
+                blending: THREE.AdditiveBlending
+            });
+            
+            const nebula = new THREE.Points(geometry, material);
+            return nebula;
+        }
+        
+        function createAsteroid() {
+            // Create an irregular asteroid shape
+            const geometry = new THREE.DodecahedronGeometry(
+                1 + Math.random() * 3, // Size
+                0 // Level of detail
+            );
+            
+            // Make it irregular
+            const positions = geometry.attributes.position;
+            for (let i = 0; i < positions.count; i++) {
+                const x = positions.getX(i);
+                const y = positions.getY(i);
+                const z = positions.getZ(i);
+                
+                // Distort each vertex slightly
+                positions.setX(i, x * (0.8 + Math.random() * 0.4));
+                positions.setY(i, y * (0.8 + Math.random() * 0.4));
+                positions.setZ(i, z * (0.8 + Math.random() * 0.4));
+            }
+            
+            geometry.computeVertexNormals();
+            
+            // Create a rocky texture
+            const material = new THREE.MeshStandardMaterial({
+                color: new THREE.Color(
+                    0.3 + Math.random() * 0.2,
+                    0.3 + Math.random() * 0.1,
+                    0.3 + Math.random() * 0.1
+                ),
+                roughness: 0.9,
+                metalness: 0.1
+            });
+            
+            const asteroid = new THREE.Mesh(geometry, material);
+            asteroid.castShadow = true;
+            
+            return asteroid;
+        }
+        
+        function createAnomalies() {
+            // Create spatial anomalies - portals, wormholes, etc.
+            for (let i = 0; i < 10; i++) {
+                const anomalyType = Math.floor(Math.random() * 3);
+                let anomaly;
+                
+                switch (anomalyType) {
+                    case 0: // Portal
+                        anomaly = createPortal();
+                        break;
+                    case 1: // Energy field
+                        anomaly = createEnergyField();
+                        break;
+                    case 2: // Gravitational distortion
+                        anomaly = createGravitationalDistortion();
+                        break;
+                }
+                
+                // Position randomly at greater distance
+                const distance = 300 + Math.random() * 600;
+                const theta = 2 * Math.PI * Math.random();
+                const phi = Math.acos(2 * Math.random() - 1);
+                
+                anomaly.position.x = distance * Math.sin(phi) * Math.cos(theta);
+                anomaly.position.y = distance * Math.sin(phi) * Math.sin(theta);
+                anomaly.position.z = distance * Math.cos(phi);
+                
+                // Add animation properties
+                anomaly.userData = {
+                    rotationSpeed: {
+                        x: (Math.random() - 0.5) * 0.01,
+                        y: (Math.random() - 0.5) * 0.01,
+                        z: (Math.random() - 0.5) * 0.01
+                    },
+                    pulseSpeed: 0.5 + Math.random(),
+                    pulseAmount: 0.2 + Math.random() * 0.3,
+                    originalScale: anomaly.scale.clone(),
+                    detectionRadius: 50, // How close player needs to be to interact
+                    type: anomalyType,
+                    discovered: false
+                };
+                
+                scene.add(anomaly);
+                anomalies.push(anomaly);
+            }
+        }
+        
+        function createPortal() {
+            // Create a glowing portal/wormhole effect
+            const portalGroup = new THREE.Group();
+            
+            // Outer ring
+            const ringGeometry = new THREE.TorusGeometry(10, 2, 16, 100);
+            const ringMaterial = new THREE.MeshPhongMaterial({
+                color: 0x6600ff,
+                emissive: 0x330077,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.8
+            });
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            portalGroup.add(ring);
+            
+            // Inner vortex (particle system)
+            const particleCount = 1000;
+            const particles = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            
+            for (let i = 0; i < particleCount; i++) {
+                // Spiral pattern
+                const angle = Math.random() * Math.PI * 2;
+                const radius = Math.random() * 8; // Smaller than the ring
+                
+                positions[i * 3] = Math.cos(angle) * radius;
+                positions[i * 3 + 1] = Math.sin(angle) * radius;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 2; // Small z-offset
+                
+                // Colors transition from blue to purple
+                const colorFactor = Math.random();
+                colors[i * 3] = 0.3 + colorFactor * 0.4; // Red
+                colors[i * 3 + 1] = 0.1 + colorFactor * 0.2; // Green
+                colors[i * 3 + 2] = 0.6 + colorFactor * 0.4; // Blue
+            }
+            
+            particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            
+            const particleMaterial = new THREE.PointsMaterial({
+                size: 0.3,
+                map: createStarTexture(),
+                vertexColors: true,
+                transparent: true,
+                blending: THREE.AdditiveBlending
+            });
+            
+            const particleSystem = new THREE.Points(particles, particleMaterial);
+            portalGroup.add(particleSystem);
+            
+            // Store the particle system for animation
+            portalGroup.userData = {
+                particleSystem: particleSystem,
+                ring: ring
+            };
+            
+            return portalGroup;
+        }
+        
+        function createEnergyField() {
+            // Create an energy field/barrier
+            const fieldGroup = new THREE.Group();
+            
+            // Create a sphere with glowing material
+            const sphereGeometry = new THREE.SphereGeometry(8, 32, 32);
+            const sphereMaterial = new THREE.MeshPhongMaterial({
+                color: 0x00ccff,
+                transparent: true,
+                opacity: 0.2,
+                side: THREE.DoubleSide,
+                wireframe: false,
+                emissive: 0x0066cc
+            });
+            
+            const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+            fieldGroup.add(sphere);
+            
+            // Add an inner sphere with different color
+            const innerSphereGeometry = new THREE.SphereGeometry(6, 32, 32);
+            const innerSphereMaterial = new THREE.MeshPhongMaterial({
+                color: 0x00ffff,
+                transparent: true,
+                opacity: 0.1,
+                side: THREE.DoubleSide,
+                wireframe: true,
+                emissive: 0x00aaff
+            });
+            
+            const innerSphere = new THREE.Mesh(innerSphereGeometry, innerSphereMaterial);
+            fieldGroup.add(innerSphere);
+            
+            // Energy particles inside
+            const particleCount = 300;
+            const particles = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            
+            for (let i = 0; i < particleCount; i++) {
+                // Random positions within the sphere
+                const theta = 2 * Math.PI * Math.random();
+                const phi = Math.acos(2 * Math.random() - 1);
+                const r = 5 * Math.cbrt(Math.random());
+                
+                positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+                positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+                positions[i * 3 + 2] = r * Math.cos(phi);
+            }
+            
+            particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
+            const particleMaterial = new THREE.PointsMaterial({
+                color: 0x88ffff,
+                size: 0.3,
+                map: createStarTexture(),
+                transparent: true,
+                blending: THREE.AdditiveBlending
+            });
+            
+            const particleSystem = new THREE.Points(particles, particleMaterial);
+            fieldGroup.add(particleSystem);
+            
+            // Store meshes for animation
+            fieldGroup.userData = {
+                outerSphere: sphere,
+                innerSphere: innerSphere,
+                particles: particleSystem
+            };
+            
+            return fieldGroup;
+        }
+        
+        function createGravitationalDistortion() {
+            // Create a visual representation of gravity distortion
+            const distortionGroup = new THREE.Group();
+            
+            // Create central dark sphere
+            const coreGeometry = new THREE.SphereGeometry(3, 32, 32);
+            const coreMaterial = new THREE.MeshBasicMaterial({
+                color: 0x000000,
+                transparent: true,
+                opacity: 0.8
+            });
+            const core = new THREE.Mesh(coreGeometry, coreMaterial);
+            distortionGroup.add(core);
+            
+            // Create gravitational lensing effect (rings)
+            const ringsCount = 5;
+            const rings = [];
+            
+            for (let i = 0; i < ringsCount; i++) {
+                const radius = 4 + i * 2;
+                const ringGeometry = new THREE.RingGeometry(radius, radius + 0.3, 64);
+                const ringMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xffffff,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.2 - (i * 0.03)
+                });
+                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                
+                // Random orientation
+                ring.rotation.x = Math.PI / 2;
+                ring.rotation.y = Math.random() * Math.PI;
+                
+                distortionGroup.add(ring);
+                rings.push(ring);
+            }
+            
+            // Add some warped space particles
+            const particleCount = 500;
+            const particles = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            
+            for (let i = 0; i < particleCount; i++) {
+                // Spiral distribution
+                const angle = Math.random() * Math.PI * 20;
+                const radius = 3 + Math.pow(angle, 0.5);
+                const height = (Math.random() - 0.5) * 10;
+                
+                positions[i * 3] = Math.cos(angle) * radius;
+                positions[i * 3 + 1] = height;
+                positions[i * 3 + 2] = Math.sin(angle) * radius;
+            }
+            
+            particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
+            const particleMaterial = new THREE.PointsMaterial({
+                color: 0xbbbbff,
+                size: 0.2,
+                map: createStarTexture(),
+                transparent: true,
+                blending: THREE.AdditiveBlending
+            });
+            
+            const particleSystem = new THREE.Points(particles, particleMaterial);
+            distortionGroup.add(particleSystem);
+            
+            // Store for animation
+            distortionGroup.userData = {
+                core: core,
+                rings: rings,
+                particles: particleSystem
+            };
+            
+            return distortionGroup;
+        }
+        
+        function createLights() {
+            // Add some lighting for the planets and other objects
+            const ambientLight = new THREE.AmbientLight(0x222266, 0.3);
+            scene.add(ambientLight);
+            
+            // A distant star (directional light)
+            const starLight = new THREE.DirectionalLight(0xffffff, 1);
+            starLight.position.set(-1000, 500, -1000);
+            scene.add(starLight);
+            
+            // A blue point light for cool effect
+            const blueLight = new THREE.PointLight(0x0066ff, 2, 500);
+            blueLight.position.set(-100, 100, -300);
+            scene.add(blueLight);
+            
+            // A reddish point light for contrast
+            const redLight = new THREE.PointLight(0xff6666, 1, 500);
+            redLight.position.set(300, -200, -200);
+            scene.add(redLight);
+        }
+        
+        // --- Event Listeners ---
+        function setupEventListeners() {
+            window.addEventListener('resize', onWindowResize, false);
+            window.addEventListener('keydown', onKeyDown, false);
+            window.addEventListener('keyup', onKeyUp, false);
+            
+            // Mouse movement for first-person view
+            document.addEventListener('mousemove', onMouseMove, false);
+            document.addEventListener('click', onMouseClick, false);
+            
+            // Start button event
+            startButton.addEventListener('click', startGame, false);
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        function onKeyDown(event) {
+            keysPressed[event.key.toLowerCase()] = true;
+        }
+        
+        function onKeyUp(event) {
+            keysPressed[event.key.toLowerCase()] = false;
+        }
+        
+        function onMouseMove(event) {
+            if (isPointerLocked) {
+                // First-person camera rotation
+                const movementX = event.movementX || 0;
+                const movementY = event.movementY || 0;
+                
+                // Rotate camera based on mouse movement
+                camera.rotation.y -= movementX * 0.002;
+                camera.rotation.x -= movementY * 0.002;
+                
+                // Clamp vertical rotation to prevent flipping
+                camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
+            }
+        }
+        
+        function onMouseClick() {
+            if (gameStarted && !isPointerLocked) {
+                // Request pointer lock for first-person camera control
+                canvas.requestPointerLock = canvas.requestPointerLock ||
+                                           canvas.mozRequestPointerLock ||
+                                           canvas.webkitRequestPointerLock;
+                canvas.requestPointerLock();
+            }
+        }
+        
+        // Handle pointer lock state changes
+        document.addEventListener('pointerlockchange', onPointerLockChange, false);
+        document.addEventListener('mozpointerlockchange', onPointerLockChange, false);
+        document.addEventListener('webkitpointerlockchange', onPointerLockChange, false);
+        
+        function onPointerLockChange() {
+            if (document.pointerLockElement === canvas ||
+                document.mozPointerLockElement === canvas ||
+                document.webkitPointerLockElement === canvas) {
+                isPointerLocked = true;
+                controls.enabled = false; // Disable orbit controls when in first-person
+            } else {
+                isPointerLocked = false;
+                if (gameStarted) {
+                    controls.enabled = true; // Enable orbit controls when out of first-person
+                }
+            }
+        }
+        
+        // --- Game Functions ---
+        function startGame() {
+            gameStarted = true;
+            titleScreen.style.display = 'none';
+            gameHUD.style.display = 'block';
+            controls.enabled = true;
+            
+            // Show intro message
+            showMessage("Mission started. Explore the universe and discover cosmic anomalies.", 5000);
+            
+            // Start with a cool zoom effect
+            const startPosition = camera.position.clone();
+            const targetPosition = new THREE.Vector3(0, 0, 50);
+            
+            // Simple animation for zooming out
+            const startTime = Date.now();
+            const duration = 3000; // 3 seconds
+            
+            function zoomAnimation() {
+                const now = Date.now();
+                const elapsed = now - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Use easing function for smooth animation
+                const easeProgress = 1 - Math.pow(1 - progress, 3); // Cubic ease out
+                
+                camera.position.lerpVectors(startPosition, targetPosition, easeProgress);
+                
+                if (progress < 1) {
+                    requestAnimationFrame(zoomAnimation);
+                }
+            }
+            
+            zoomAnimation();
+        }
+        
+        function handlePlayerMovement() {
+            if (!gameStarted || !isPointerLocked) return;
+            
+            const speed = keysPressed[' '] ? movementSpeed * 3 : movementSpeed; // Boost with spacebar
+            const slowMotion = keysPressed['shift'] ? 0.3 : 1.0; // Slow motion with shift
+            
+            // Calculate movement direction relative to camera orientation
+            playerDirection.set(0, 0, 0);
+            
+            // Forward/backward
+            if (keysPressed['w']) {
+                playerDirection.z = -1;
+            } else if (keysPressed['s']) {
+                playerDirection.z = 1;
+            }
+            
+            // Left/right
+            if (keysPressed['a']) {
+                playerDirection.x = -1;
+            } else if (keysPressed['d']) {
+                playerDirection.x = 1;
+            }
+            
+            // Up/down
+            if (keysPressed['q']) {
+                playerDirection.y = 1;
+            } else if (keysPressed['e']) {
+                playerDirection.y = -1;
+            }
+            
+            // Normalize if moving in multiple directions
+            if (playerDirection.length() > 0) {
+                playerDirection.normalize();
+            }
+            
+            // Apply camera rotation to movement direction
+            playerDirection.applyQuaternion(camera.quaternion);
+            
+            // Update velocity with smoothing
+            const acceleration = 0.05;
+            playerVelocity.x += (playerDirection.x * speed - playerVelocity.x) * acceleration;
+            playerVelocity.y += (playerDirection.y * speed - playerVelocity.y) * acceleration;
+            playerVelocity.z += (playerDirection.z * speed - playerVelocity.z) * acceleration;
+            
+            // Apply slow motion effect
+            playerVelocity.multiplyScalar(slowMotion);
+            
+            // Apply velocity to camera position
+            camera.position.add(playerVelocity);
+            
+            // Apply a slight drag to slow down naturally
+            const drag = 0.98;
+            playerVelocity.multiplyScalar(drag);
+            
+            // Update HUD info
+            updateHUD();
+        }
+        
+        function updateHUD() {
+            // Update position display
+            coordinatesElement.textContent = 
+                `X: ${camera.position.x.toFixed(2)} | Y: ${camera.position.y.toFixed(2)} | Z: ${camera.position.z.toFixed(2)}`;
+            
+            // Update velocity display
+            const speed = Math.sqrt(
+                playerVelocity.x * playerVelocity.x + 
+                playerVelocity.y * playerVelocity.y + 
+                playerVelocity.z * playerVelocity.z
+            );
+            velocityElement.textContent = `${speed.toFixed(2)} units/s`;
+            
+            // Update anomaly counter
+            anomalyCountElement.textContent = anomalyCount;
+            
+            // Update energy
+            energyElement.textContent = `${playerEnergy}%`;
+        }
+        
+        function checkAnomalyProximity() {
+            if (!gameStarted) return;
+            
+            // Check if player is near any anomalies
+            anomalies.forEach(anomaly => {
+                if (anomaly.userData.discovered) return;
+                
+                const distance = camera.position.distanceTo(anomaly.position);
+                
+                if (distance < anomaly.userData.detectionRadius) {
+                    // Player discovered an anomaly!
+                    anomaly.userData.discovered = true;
+                    anomalyCount++;
+                    
+                    // Show notification
+                    showAnomalyAlert(anomaly.userData.type);
+                    
+                    // Special effects based on anomaly type
+                    const glitchEffect = composer.glitchPass;
+                    glitchEffect.uniforms["amount"].value = 1.0;
+                    
+                    // Reduce glitch over time
+                    const startTime = Date.now();
+                    const glitchDuration = 2000; // 2 seconds
+                    
+                    function reduceGlitch() {
+                        const elapsed = Date.now() - startTime;
+                        const progress = Math.min(elapsed / glitchDuration, 1);
+                        
+                        glitchEffect.uniforms["amount"].value = 1.0 - progress;
+                        
+                        if (progress < 1) {
+                            requestAnimationFrame(reduceGlitch);
+                        }
+                    }
+                    
+                    reduceGlitch();
+                    
+                    // Add energy based on anomaly type
+                    playerEnergy = Math.min(100, playerEnergy + 10);
+                }
+            });
+        }
+        
+        function showAnomalyAlert(type) {
+            let anomalyType;
+            switch (type) {
+                case 0:
+                    anomalyType = "PORTAL";
+                    break;
+                case 1:
+                    anomalyType = "ENERGY FIELD";
+                    break;
+                case 2:
+                    anomalyType = "GRAVITATIONAL DISTORTION";
+                    break;
+            }
+            
+            anomalyAlert.textContent = `${anomalyType} ANOMALY DETECTED!`;
+            anomalyAlert.style.display = 'block';
+            
+            // Add scanning sound effect (commented out as we can't play audio)
+            // playSound('scan.mp3');
+            
+            // Hide alert after a few seconds
+            setTimeout(() => {
+                anomalyAlert.style.display = 'none';
+            }, 3000);
+        }
+        
+        function showMessage(text, duration) {
+            messageBox.textContent = text;
+            messageBox.style.display = 'block';
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+            }, duration);
+        }
+        
+        function animateSceneElements(time) {
+            // Animate stars
+            if (stars) {
+                stars.rotation.y += 0.00005;
+                stars.rotation.x += 0.00002;
+            }
+            
+            // Animate celestial bodies
+            celestialBodies.forEach(body => {
+                if (body.userData) {
+                    // Rotate the body
+                    body.rotation.x += body.userData.rotationSpeed.x;
+                    body.rotation.y += body.userData.rotationSpeed.y;
+                    body.rotation.z += body.userData.rotationSpeed.z;
+                    
+                    // Add slight wobble to position
+                    if (body.userData.wobbleAmount > 0) {
+                        const wobbleX = Math.sin(time * body.userData.wobbleSpeed * 0.001) * body.userData.wobbleAmount;
+                        const wobbleY = Math.cos(time * body.userData.wobbleSpeed * 0.0005) * body.userData.wobbleAmount;
+                        
+                        body.position.x = body.userData.originalPosition.x + wobbleX;
+                        body.position.y = body.userData.originalPosition.y + wobbleY;
+                    }
+                }
+            });
+            
+            // Animate anomalies
+            anomalies.forEach(anomaly => {
+                if (anomaly.userData) {
+                    // Rotate the anomaly
+                    anomaly.rotation.x += anomaly.userData.rotationSpeed.x;
+                    anomaly.rotation.y += anomaly.userData.rotationSpeed.y;
+                    anomaly.rotation.z += anomaly.userData.rotationSpeed.z;
+                    
+                    // Pulse effect
+                    const pulseFactor = Math.sin(time * 0.001 * anomaly.userData.pulseSpeed) * anomaly.userData.pulseAmount + 1;
+                    anomaly.scale.set(
+                        anomaly.userData.originalScale.x * pulseFactor,
+                        anomaly.userData.originalScale.y * pulseFactor,
+                        anomaly.userData.originalScale.z * pulseFactor
+                    );
+                    
+                    // Type-specific animations
+                    switch (anomaly.userData.type) {
+                        case 0: // Portal
+                            if (anomaly.userData.particleSystem) {
+                                anomaly.userData.particleSystem.rotation.z += 0.01;
+                                if (anomaly.userData.ring) {
+                                    anomaly.userData.ring.rotation.z -= 0.005;
+                                }
+                            }
+                            break;
+                        case 1: // Energy field
+                            if (anomaly.userData.outerSphere && anomaly.userData.innerSphere) {
+                                anomaly.userData.outerSphere.rotation.y += 0.005;
+                                anomaly.userData.innerSphere.rotation.y -= 0.007;
+                                anomaly.userData.innerSphere.rotation.x += 0.003;
+                            }
+                            break;
+                        case 2: // Gravitational distortion
+                            if (anomaly.userData.rings) {
+                                anomaly.userData.rings.forEach((ring, index) => {
+                                    ring.rotation.z += 0.005 * (index % 2 ? 1 : -1);
+                                    ring.rotation.x += 0.002 * (index % 3 ? 1 : -1);
+                                });
+                            }
+                            break;
+                    }
+                }
+            });
+        }
+        
+        // --- Animation Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const time = Date.now();
+            
+            // Handle player movement
+            handlePlayerMovement();
+            
+            // Check if player is near anomalies
+            checkAnomalyProximity();
+            
+            // Animate various scene elements
+            animateSceneElements(time);
+            
+            // Update controls (required if enableDamping is true)
+            controls.update();
+            
+            // Update effects
+            composer.render();
+        }
+        
+        // --- Start the application ---
+        init();     // Initialize the scene
+        animate();  // Start the animation loop
+    </script>
+</body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Space Environment</title>
+    <style>
+        body {
+            margin: 0; /* Remove default margin */
+            overflow: hidden; /* Prevent scrollbars */
+            background-color: #000000; /* Black background */
+            font-family: 'Inter', sans-serif; /* Use Inter font */
+        }
+        /* Style the canvas to fill the viewport */
+        #spaceCanvas {
+            display: block; /* Remove extra space below canvas */
+            width: 100vw; /* Viewport width */
+            height: 100vh; /* Viewport height */
+        }
+         /* Style for a simple message box */
+        .message-box {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(40, 40, 40, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 100;
+            display: none; /* Hidden by default */
+            text-align: center;
+        }
+    </style>
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <canvas id="spaceCanvas"></canvas>
+
+    <div id="messageBox" class="message-box">
+        Drag mouse to look around. Scroll to zoom.
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        // Import necessary modules from Three.js
+        import * as THREE from 'three';
+        // Import OrbitControls for camera manipulation
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- Core Three.js Components ---
+
+        let scene, camera, renderer, stars, controls;
+        const canvas = document.getElementById('spaceCanvas');
+        const messageBox = document.getElementById('messageBox');
+
+        // --- Initialization Function ---
+        function init() {
+            // 1. Scene: Container for all 3D objects
+            scene = new THREE.Scene();
+
+            // 2. Camera: Defines the viewpoint
+            // PerspectiveCamera(fov, aspect_ratio, near_clip, far_clip)
+            camera = new THREE.PerspectiveCamera(
+                75, // Field of View (degrees) - wider angle
+                window.innerWidth / window.innerHeight, // Aspect Ratio - match window
+                0.1, // Near clipping plane - objects closer won't be rendered
+                2000 // Far clipping plane - objects further won't be rendered
+            );
+            // Position the camera slightly back from the origin
+            camera.position.z = 5;
+
+            // 3. Renderer: Draws the scene onto the canvas
+            renderer = new THREE.WebGLRenderer({
+                canvas: canvas,
+                antialias: true // Enable anti-aliasing for smoother edges
+            });
+            // Set the size of the renderer to match the window
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            // Adjust pixel ratio for high-density displays (like Retina)
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            // --- Controls ---
+            // Allow user interaction (orbit, zoom, pan)
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true; // Add inertia for smoother movement
+            controls.dampingFactor = 0.05; // How quickly the damping effect fades
+            controls.screenSpacePanning = false; // Keep panning relative to camera orientation
+            controls.minDistance = 1; // Minimum zoom distance
+            controls.maxDistance = 1000; // Maximum zoom distance
+            controls.enablePan = false; // Disable panning for a space view feel
+
+            // --- Starfield ---
+            createStarfield();
+
+            // --- Lighting ---
+            // Add subtle ambient light so objects aren't completely black
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.3); // Soft white light, low intensity
+            scene.add(ambientLight);
+
+            // --- Event Listeners ---
+            // Handle window resize events
+            window.addEventListener('resize', onWindowResize, false);
+
+            // Show initial message
+            showMessage("Drag mouse to look around. Scroll to zoom.", 4000);
+        }
+
+        // --- Helper Functions ---
+
+        // Function to create the starfield
+        function createStarfield() {
+            const starGeometry = new THREE.BufferGeometry();
+            const starMaterial = new THREE.PointsMaterial({
+                color: 0xffffff, // White stars
+                size: 0.02,      // Adjust size as needed
+                sizeAttenuation: true // Stars appear smaller further away
+            });
+
+            const starVertices = [];
+            const starCount = 20000; // Number of stars
+            const radius = 1000;    // The radius of the sphere containing stars
+
+            for (let i = 0; i < starCount; i++) {
+                // Generate random 3D coordinates within a sphere
+                // Using Math.cbrt(Math.random()) ensures uniform volume distribution
+                const theta = 2 * Math.PI * Math.random();       // Random angle around Y axis
+                const phi = Math.acos(2 * Math.random() - 1); // Random angle from Y axis
+                const r = Math.cbrt(Math.random()) * radius;    // Random radius with uniform distribution
+
+                // Convert spherical coordinates to Cartesian (x, y, z)
+                const x = r * Math.sin(phi) * Math.cos(theta);
+                const y = r * Math.sin(phi) * Math.sin(theta);
+                const z = r * Math.cos(phi);
+
+                starVertices.push(x, y, z);
+            }
+
+            // Set the positions attribute for the BufferGeometry
+            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+
+            // Create the Points object (particle system)
+            stars = new THREE.Points(starGeometry, starMaterial);
+            scene.add(stars); // Add the stars to the scene
+        }
+
+        // Function to handle window resizing
+        function onWindowResize() {
+            // Update camera aspect ratio
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix(); // Apply changes to the camera
+
+            // Update renderer size
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            // Update pixel ratio (important for responsiveness)
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        }
+
+        // Function to show a temporary message
+        function showMessage(text, duration) {
+            messageBox.textContent = text;
+            messageBox.style.display = 'block';
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+            }, duration);
+        }
+
+
+        // --- Animation Loop ---
+        function animate() {
+            // Request the next frame from the browser
+            requestAnimationFrame(animate);
+
+            // Update controls (required if enableDamping is true)
+            controls.update();
+
+            // Optional: Add subtle rotation to the starfield for dynamism
+            if (stars) {
+               // stars.rotation.y += 0.00005;
+               // stars.rotation.x += 0.00002;
+            }
+
+            // Render the scene from the camera's perspective
+            renderer.render(scene, camera);
+        }
+
+        // --- Start the application ---
+        init();     // Initialize the scene, camera, renderer, etc.
+        animate();  // Start the animation loop
+    </script>
+</body>
+</html>

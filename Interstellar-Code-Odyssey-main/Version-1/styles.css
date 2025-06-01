@@ -1,0 +1,40 @@
+body {
+    background-color: black;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+h1 {
+    color: cyan;
+}
+
+.debugging-zone {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 10px;
+    display: inline-block;
+}
+
+button {
+    background-color: cyan;
+    color: black;
+    padding: 10px;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: darkcyan;
+}
+
+/* Glitch Effect for Incorrect Answers */
+.glitch {
+    animation: glitchEffect 0.3s linear 2;
+}
+
+@keyframes glitchEffect {
+    0% { color: red; transform: translateX(-2px); }
+    50% { color: yellow; transform: translateX(2px); }
+    100% { color: red; transform: translateX(-2px); }
+}
